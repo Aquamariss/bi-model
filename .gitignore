@@ -36,6 +36,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# fichiers de test locaux (racine)
+/*.bpmn
+/*.png
+/*.jpg
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

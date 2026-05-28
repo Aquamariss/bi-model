@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { GitBranch, FolderOpen, Settings, LogOut, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
   { href: '/projects', label: 'Projets', icon: FolderOpen },
@@ -11,6 +12,14 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router   = useRouter()
+  const supabase = createClient()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <div className="flex flex-col w-64 min-h-screen bg-white border-r border-slate-200">
@@ -73,13 +82,13 @@ export function Sidebar() {
           <Settings className={cn('w-4 h-4', pathname.startsWith('/settings') ? 'text-violet-600' : '')} />
           Paramètres
         </Link>
-        <Link
-          href="/login"
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-slate-500 hover:bg-slate-50 hover:text-red-600 transition-colors"
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Déconnexion
-        </Link>
+        </button>
       </div>
     </div>
   )

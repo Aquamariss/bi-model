@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit, Plus, FileText, CheckSquare,
-  Clock, CheckCircle2, Circle, Zap, Loader2, Check, X, Trash2
+  Clock, CheckCircle2, Circle, Zap, Loader2, Check, X, Trash2, Share2
 } from 'lucide-react'
 import { ArtifactCard } from '@/components/projects/ArtifactCard'
 import { ArtifactModal } from '@/components/projects/ArtifactModal'
+import { ShareModal } from '@/components/projects/ShareModal'
 import { Button } from '@/components/ui/button'
 import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { RichTextViewer } from '@/components/ui/RichTextViewer'
@@ -47,6 +48,9 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null)
   const [deletingTaskId, setDeletingTaskId]   = useState<string | null>(null)
+  const [showShareModal, setShowShareModal]   = useState(false)
+  const [currentUserId, setCurrentUserId]     = useState<string | null>(null)
+  const [isOwner, setIsOwner]                 = useState(false)
 
   // Édition inline de la description
   const [editingDesc, setEditingDesc] = useState(false)
@@ -95,7 +99,8 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: proj }, { data: arts }, { data: tsks }] = await Promise.all([
+      const [{ data: { user } }, { data: proj }, { data: arts }, { data: tsks }] = await Promise.all([
+        supabase.auth.getUser(),
         supabase.from('projects').select('*').eq('id', id).single(),
         supabase.from('artifacts').select('*').eq('project_id', id).order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').eq('project_id', id).order('created_at', { ascending: false }),
@@ -105,6 +110,8 @@ export default function ProjectDetailPage() {
       setDescDraft(proj.description ?? '')
       setArtifacts(arts ?? [])
       setTasks(tsks ?? [])
+      setCurrentUserId(user?.id ?? null)
+      setIsOwner(user?.id === proj.user_id)
       setLoading(false)
       loadImages(arts ?? [])
     }
@@ -193,11 +200,30 @@ export default function ProjectDetailPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
         </div>
-        <Link href={`/projects/${project.id}/edit`}>
-          <Button variant="outline" size="sm" className="gap-1.5 text-slate-600">
-            <Edit className="w-3.5 h-3.5" /> Modifier
+        {/* Bouton Partager — owner uniquement */}
+        {isOwner && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-slate-600"
+            onClick={() => setShowShareModal(true)}
+          >
+            <Share2 className="w-3.5 h-3.5" /> Partager
           </Button>
-        </Link>
+        )}
+        {/* Badge "Partagé" — affiché si l'utilisateur n'est pas owner */}
+        {!isOwner && (
+          <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 border border-violet-200 font-medium">
+            <Share2 className="w-3 h-3" /> Partagé
+          </span>
+        )}
+        {isOwner && (
+          <Link href={`/projects/${project.id}/edit`}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-slate-600">
+              <Edit className="w-3.5 h-3.5" /> Modifier
+            </Button>
+          </Link>
+        )}
         <Link href={`/tasks/new?projectId=${project.id}`}>
           <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white">
             <Zap className="w-3.5 h-3.5" /> Nouvelle tâche
@@ -424,6 +450,15 @@ export default function ProjectDetailPage() {
           projectId={project.id}
           onClose={() => setEditingArtifact(null)}
           onDone={handleSaveArtifact}
+        />
+      )}
+
+      {showShareModal && currentUserId && (
+        <ShareModal
+          projectId={project.id}
+          projectName={project.name}
+          currentUserId={currentUserId}
+          onClose={() => setShowShareModal(false)}
         />
       )}
     </div>
